@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use std::ptr;
 
 unsafe extern "C" {
-    fn retrors_log_print(lev: retro_log_level, fmt: *const i8, ...);
+    fn retrors_log_print(lev: retro_log_level, fmt: *const c_char, ...);
 }
 
 thread_local! {
