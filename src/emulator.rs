@@ -77,6 +77,7 @@ struct EmulatorContext {
     memory_map: Vec<retro_memory_descriptor>,
     av_info: retro_system_av_info,
     sys_info: retro_system_info,
+    shutdown_requested: bool,
     gfx: Box<dyn Gfx>,
     _marker: PhantomData<NotSendSync>,
 }
@@ -240,6 +241,7 @@ impl Emulator {
                     pixfmt: retro_pixel_format::RETRO_PIXEL_FORMAT_0RGB1555,
                     image_depth: 0,
                     memory_map: Vec::new(),
+                    shutdown_requested: false,
                     gfx,
                     _marker: PhantomData,
                 };
@@ -334,10 +336,16 @@ impl Emulator {
             // set inputs on CB
             ctx.buttons = [Buttons::new(), Buttons::new()];
             ctx.button_callback = None;
+            ctx.shutdown_requested = false;
             // clear fb
             ctx.frame_ptr = ptr::null();
         });
         unsafe { (self.core.core.retro_reset)() }
+    }
+    /// Returns whether the core has requested that the frontend shut it down.
+    #[must_use]
+    pub fn shutdown_requested(&self) -> bool {
+        CTX.with_borrow(|ctx| ctx.as_ref().unwrap().shutdown_requested)
     }
     #[must_use]
     fn get_ram_size(&self, rtype: libc::c_uint) -> usize {
@@ -1002,6 +1010,7 @@ unsafe extern "C" fn callback_environment(cmd: u32, data: *mut c_void) -> bool {
                         }
                     },
                     RETRO_ENVIRONMENT_SHUTDOWN => {
+                        ctx.shutdown_requested = true;
                         ctx.gfx.destroy_context();
                         true
                     },
